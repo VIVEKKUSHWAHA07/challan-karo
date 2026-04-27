@@ -132,22 +132,69 @@ export default function ViewChallan() {
     return str || 'Zero Only';
   };
 
+  // Convert an image URL to base64 data URL (bypasses html2canvas CORS issue)
+  const toBase64 = (url: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d')!.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(''); // If logo fails, just skip it
+      img.src = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); // cache bust
+    });
+  };
+
   const handleDownloadPDF = async () => {
     if (!printRef.current) return;
     setGeneratingPDF(true);
+
+    // Temporarily swap logo img src to base64 to avoid CORS taint in html2canvas
+    const logoImg = printRef.current.querySelector('img[alt="Company Logo"]') as HTMLImageElement | null;
+    const originalSrc = logoImg?.src || '';
+    let base64Src = '';
+
     try {
-      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
+      if (logoImg && originalSrc) {
+        base64Src = await toBase64(originalSrc);
+        if (base64Src) logoImg.src = base64Src;
+      }
+
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${challan.challan_no}.pdf`);
     } catch (error) {
       console.error('Error generating PDF', error);
-      alert('Failed to generate PDF. Please try again.');
+      // Fallback: try without logo
+      try {
+        if (logoImg) logoImg.style.display = 'none';
+        const canvas = await html2canvas(printRef.current!, { scale: 2, allowTaint: true, useCORS: false, logging: false });
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
+        pdf.save(`${challan.challan_no}.pdf`);
+        if (logoImg) logoImg.style.display = '';
+      } catch (e2) {
+        alert('PDF generation failed. Please try using Ctrl+P to print as PDF instead.');
+      }
     } finally {
+      // Restore original logo src
+      if (logoImg && originalSrc) logoImg.src = originalSrc;
       setGeneratingPDF(false);
     }
   };
