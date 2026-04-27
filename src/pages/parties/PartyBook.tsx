@@ -218,87 +218,133 @@ export default function PartyBook() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal — rendered outside Layout stack to avoid z-index conflict */}
       {isModalOpen && (
-        <div className="fixed z-50 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleCloseModal}></div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div
+          style={{ zIndex: 9999 }}
+          className="fixed inset-0 overflow-y-auto"
+          aria-labelledby="modal-title"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
+            onClick={handleCloseModal}
+          />
+
+          {/* Modal Panel — centered */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg"
+              style={{ zIndex: 10000 }}
+            >
               <form onSubmit={handleSubmit}>
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        {editingParty ? 'Edit Party' : 'Add New Party'}
-                      </h3>
-                      <div className="mt-4 space-y-4">
-                        <div>
-                          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Party Name *</label>
-                          <input
-                            type="text"
-                            name="name"
-                            id="name"
-                            required
-                            value={formData.name}
-                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary sm:text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address *</label>
-                          <textarea
-                            name="address"
-                            id="address"
-                            required
-                            rows={3}
-                            value={formData.address}
-                            onChange={(e) => setFormData({...formData, address: e.target.value})}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary sm:text-sm"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              id="phone"
-                              value={formData.phone}
-                              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary sm:text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="gst_number" className="block text-sm font-medium text-gray-700">GST Number (Optional)</label>
-                            <input
-                              type="text"
-                              name="gst_number"
-                              id="gst_number"
-                              value={formData.gst_number}
-                              onChange={(e) => setFormData({...formData, gst_number: e.target.value})}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary sm:text-sm uppercase"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                  >
-                    {saving ? 'Saving...' : 'Save Party'}
-                  </button>
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900" id="modal-title">
+                    {editingParty ? 'Edit Party' : 'Add New Party'}
+                  </h3>
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="px-6 py-5 space-y-4">
+                  <div>
+                    <label htmlFor="p-name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Party / Company Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="p-name"
+                      required
+                      autoFocus
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. Shree Ram Industries"
+                      className="block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="p-address" className="block text-sm font-medium text-gray-700 mb-1">
+                      Address <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="p-address"
+                      required
+                      rows={3}
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Full address including city and PIN"
+                      className="block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="p-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        id="p-phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="10-digit number"
+                        className="block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="p-gst" className="block text-sm font-medium text-gray-700 mb-1">
+                        GSTIN
+                      </label>
+                      <input
+                        type="text"
+                        id="p-gst"
+                        value={formData.gst_number}
+                        onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })}
+                        placeholder="15-digit GST No."
+                        maxLength={15}
+                        className="block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {saving ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      editingParty ? 'Update Party' : 'Save Party'
+                    )}
                   </button>
                 </div>
               </form>
