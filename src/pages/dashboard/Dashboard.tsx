@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { FileText, ArrowRightLeft, CornerDownLeft, Wrench, Eye, Download, Trash2 } from 'lucide-react';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [recentChallans, setRecentChallans] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -52,13 +53,17 @@ export default function Dashboard() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this challan?')) return;
-    
     try {
-      await supabase.from('challans').delete().eq('id', id);
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Error deleting challan:', error);
+      const { error } = await supabase.from('challans').delete().eq('id', id);
+      if (error) throw error;
+      await fetchDashboardData();
+    } catch (error: any) {
+      alert(error.message || 'Error deleting challan');
     }
+  };
+
+  const handleDownload = (id: string) => {
+    navigate(`/challan/view/${id}?download=true`);
   };
 
   const challanTypes = [
@@ -156,13 +161,25 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
-                          <Link to={`/challan/view/${challan.id}`} className="text-blue-600 hover:text-blue-900 p-1">
+                          <Link
+                            to={`/challan/view/${challan.id}`}
+                            title="View Challan"
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                          >
                             <Eye className="h-5 w-5" />
                           </Link>
-                          <button className="text-gray-600 hover:text-gray-900 p-1">
+                          <button
+                            onClick={() => handleDownload(challan.id)}
+                            title="Download PDF"
+                            className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50"
+                          >
                             <Download className="h-5 w-5" />
                           </button>
-                          <button onClick={() => handleDelete(challan.id)} className="text-red-600 hover:text-red-900 p-1">
+                          <button
+                            onClick={() => handleDelete(challan.id)}
+                            title="Delete Challan"
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                          >
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </div>

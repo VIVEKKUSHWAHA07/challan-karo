@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PartyBook from './pages/parties/PartyBook';
 import CreateChallan from './pages/challan/CreateChallan';
 import ViewChallan from './pages/challan/ViewChallan';
+import Settings from './pages/settings/Settings';
 import './App.css';
 
 function App() {
@@ -39,6 +40,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* ⚠️ IMPORTANT: /challan/view/:id MUST come BEFORE /challan/:type
+            Otherwise React Router treats "view" as the :type param */}
+        <Route
+          path="/challan/view/:id"
+          element={
+            <ProtectedRoute>
+              <ViewChallan />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/challan/:type"
           element={
@@ -48,10 +59,10 @@ function App() {
           }
         />
         <Route
-          path="/challan/view/:id"
+          path="/settings"
           element={
             <ProtectedRoute>
-              <ViewChallan />
+              <Settings />
             </ProtectedRoute>
           }
         />

@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Create Challan', href: '/dashboard', icon: FileText }, // Will link to correct place later
+    { name: 'Create Challan', href: '/challan/dc', icon: FileText },
     { name: 'Party Book', href: '/parties', icon: Users },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

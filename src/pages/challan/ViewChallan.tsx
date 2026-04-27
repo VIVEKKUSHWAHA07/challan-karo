@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import Layout from '../../components/Layout';
 import { Share2, Download, ArrowLeft } from 'lucide-react';
@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 export default function ViewChallan() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -17,10 +18,20 @@ export default function ViewChallan() {
   const [profile, setProfile] = useState<any>(null);
   const [party, setParty] = useState<any>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const autoDownloadTriggered = useRef(false);
 
   useEffect(() => {
     fetchChallanData();
   }, [id]);
+
+  // Auto-trigger download if ?download=true query param is present
+  useEffect(() => {
+    if (!loading && challan && profile && searchParams.get('download') === 'true' && !autoDownloadTriggered.current) {
+      autoDownloadTriggered.current = true;
+      // Small delay to ensure the DOM is rendered
+      setTimeout(() => handleDownloadPDF(), 800);
+    }
+  }, [loading, challan, profile, searchParams]);
 
   const fetchChallanData = async () => {
     try {
