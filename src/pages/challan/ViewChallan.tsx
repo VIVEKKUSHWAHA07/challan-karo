@@ -33,45 +33,81 @@ export default function ViewChallan() {
     }
   }, [loading, challan, profile, searchParams]);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const fetchChallanData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // 1. Get the authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setFetchError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
 
-      const { data: challanData } = await supabase
+      // 2. Fetch challan — the primary record
+      const { data: challanData, error: challanError } = await supabase
         .from('challans')
         .select('*')
         .eq('id', id)
-        .single();
-      
+        .eq('user_id', user.id)   // Security: ensure user owns this challan
+        .maybeSingle();
+
+      if (challanError) {
+        setFetchError(`Failed to load challan: ${challanError.message}`);
+        setLoading(false);
+        return;
+      }
       if (!challanData) {
-        navigate('/dashboard');
+        setFetchError('Challan not found or you do not have permission to view it.');
+        setLoading(false);
         return;
       }
       setChallan(challanData);
 
-      const { data: itemsData } = await supabase
-        .from('challan_items')
-        .select('*')
-        .eq('challan_id', id);
-      setItems(itemsData || []);
+      // 3. Fetch line items — fail gracefully if table doesn't exist
+      try {
+        const { data: itemsData } = await supabase
+          .from('challan_items')
+          .select('*')
+          .eq('challan_id', id)
+          .order('id');
+        setItems(itemsData || []);
+      } catch {
+        setItems([]);
+      }
 
-      const { data: partyData } = await supabase
-        .from('parties')
-        .select('*')
-        .eq('id', challanData.party_id)
-        .single();
-      setParty(partyData);
+      // 4. Fetch party — fail gracefully if party was deleted
+      if (challanData.party_id) {
+        try {
+          const { data: partyData } = await supabase
+            .from('parties')
+            .select('*')
+            .eq('id', challanData.party_id)
+            .maybeSingle();
+          setParty(partyData);
+        } catch {
+          // Party not critical — challan still renders with party_name field
+        }
+      }
 
-      const { data: profileData } = await supabase
+      // 5. Fetch company profile
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError || !profileData) {
+        setFetchError('Could not load your company profile. Please go to Settings and save it.');
+        setLoading(false);
+        return;
+      }
       setProfile(profileData);
 
-    } catch (error) {
-      console.error('Error fetching challan:', error);
+    } catch (error: any) {
+      console.error('Unexpected error:', error);
+      setFetchError(error.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -132,11 +168,46 @@ export default function ViewChallan() {
     window.open(waUrl, '_blank');
   };
 
-  if (loading || !challan || !profile) {
+  // Show spinner only while actively loading
+  if (loading) {
     return (
       <Layout>
-        <div className="p-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="p-8 flex flex-col items-center justify-center min-h-64">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-sm text-gray-500">Loading challan...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show actionable error message instead of infinite spinner
+  if (fetchError || !challan || !profile) {
+    return (
+      <Layout>
+        <div className="max-w-lg mx-auto mt-16 p-6 bg-white rounded-xl shadow text-center">
+          <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Could Not Load Challan</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            {fetchError || 'This challan could not be displayed. It may have been deleted or you may not have access.'}
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+            >
+              ← Back to Dashboard
+            </button>
+            <button
+              onClick={() => { setLoading(true); setFetchError(null); fetchChallanData(); }}
+              className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </Layout>
     );
